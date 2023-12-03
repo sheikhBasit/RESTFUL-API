@@ -1,78 +1,43 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
+// Function to fetch and display books
+async function fetchBooks() {
+    const response = await fetch('/books');
+    const books = await response.json();
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+    const booksList = document.getElementById('booksList');
+    booksList.innerHTML = '';
 
-// Middleware
-app.use(bodyParser.json());
+    books.forEach(book => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${book.title} by ${book.author} - $${book.price}`;
+        booksList.appendChild(listItem);
+    });
+    }
 
-// MongoDB Connection
-mongoose.connect('mongodb://localhost:27017/booksdb', {
-useNewUrlParser: true,
-useUnifiedTopology: true,
-});
+  // Function to add a new book
+async function addBook(event) {
+    event.preventDefault();
 
-// Books Model
-const Product = mongoose.model('Books', {
-    title: String,
-    author: String,
-    price: Number,
-});
+    const title = document.getElementById('title').value;
+    const author = document.getElementById('author').value;
+    const price = document.getElementById('price').value;
 
-// Routes
-app.get('/books', async (req, res) => {
-try {
-    const products = await Product.find();
-    res.json(products);
-} catch (error) {
-    res.status(500).json({ error: error.message });
+    const response = await fetch('/books', {
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/json'
+    },
+        body: JSON.stringify({ title, author, price })
+    });
+
+    const newBook = await response.json();
+    console.log('New Book:', newBook);
+
+    // Fetch and display updated books after adding a new book
+    fetchBooks();
 }
-});
 
-app.post('/books', async (req, res) => {
-try {
-    const product = new Product(req.body);
-    await product.save();
-    res.json(product);
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
-});
+  // Attach event listener to the form
+document.getElementById('addBookForm').addEventListener('submit', addBook);
 
-app.get('/books/:id', async (req, res) => {
-try {
-    const product = await Product.findById(req.params.id);
-    res.json(product);
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
-});
-
-app.put('/books/:id', async (req, res) => {
-try {
-    const product = await Product.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true }
-    );
-    res.json(product);
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
-});
-
-app.delete('/books/:id', async (req, res) => {
-try {
-    await Product.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Product deleted successfully' });
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
-});
-
-// Start the server
-app.listen(PORT, () => {
-console.log(`Server is running on http://localhost:${PORT}`);
-});
+  // Initial fetch and display of books
+fetchBooks();
