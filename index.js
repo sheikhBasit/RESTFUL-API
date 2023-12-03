@@ -1,57 +1,78 @@
-let express = require('express')
-let app = express()
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
 
-app.use(express.json())
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-const user = [{
-    "userId": 11,
-    "id": 1,
-    "title": "delectus aut autem",
-    "completed": false
-    },
-    {
-    "userId": 12,
-    "id": 2,
-    "title": "quis ut nam facilis et officia qui",
-    "completed": false
-    },
-    {
-    "userId": 13,
-    "id": 3,
-    "title": "fugiat veniam minus",
-    "completed": false
-    }]
+// Middleware
+app.use(bodyParser.json());
 
-app.get('/api/users', (req, res) => {
-    res.send(user)
-})
-app.get('/api/search', (req, res) => {
-    res.send("Api Search")    
-    })     
-app.get('/api/users/:index', (req, res) => {    
-    res.send(user[req.params.index])
-})
-app.get('/api/users/:index', (req, res) => {
-    if (!user[req.params.index]) {
-        return res.send("Not found")
-    } else {
-        res.send(user[req.params.index])
-    }
-})
+// MongoDB Connection
+mongoose.connect('mongodb://localhost:27017/booksdb', {
+useNewUrlParser: true,
+useUnifiedTopology: true,
+});
 
-app.put('/api/users/:index', (req, res) => {
-    user[req.params.index] = req.body.name
-    res.send(user[req.params.index])
-})
+// Books Model
+const Product = mongoose.model('Books', {
+    title: String,
+    author: String,
+    price: Number,
+});
 
-app.delete('/api/users/:index', (req, res) => {
-    user.splice(req.params.index, 1)
-    res.send(user)
-})
-app.post('/api/users', (req, res) => {
-    const newuser = req.body.name
-    user.push(newuser)
-    res.send(user)
-})
+// Routes
+app.get('/books', async (req, res) => {
+try {
+    const products = await Product.find();
+    res.json(products);
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+});
 
-app.listen(3000)
+app.post('/books', async (req, res) => {
+try {
+    const product = new Product(req.body);
+    await product.save();
+    res.json(product);
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+});
+
+app.get('/books/:id', async (req, res) => {
+try {
+    const product = await Product.findById(req.params.id);
+    res.json(product);
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+});
+
+app.put('/books/:id', async (req, res) => {
+try {
+    const product = await Product.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    { new: true }
+    );
+    res.json(product);
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+});
+
+app.delete('/books/:id', async (req, res) => {
+try {
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Product deleted successfully' });
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+});
+
+// Start the server
+app.listen(PORT, () => {
+console.log(`Server is running on http://localhost:${PORT}`);
+});
